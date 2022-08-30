@@ -27,17 +27,12 @@ class DatabaseObject
         global $database;
 
         $result_set = $database->query($sql);
-        if ($result_set) {
-
-            $object_array = array();
-            while ($row = $database->fetch_array($result_set)) {
-                $object_array[] = static::instantiate($row);
-            }
-
-            return $object_array;
-        } else {
-            return $result_set;
+        $object_array = array();
+        while ($row = $database->fetch_array($result_set)) {
+            $object_array[] = static::instantiate($row);
         }
+        return $object_array;
+
     }
     private static function instantiate($record)
     {
