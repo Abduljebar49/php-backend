@@ -68,6 +68,3 @@ class MySQLDatabse{
 
 
 $database = new mySQLDatabse();
-
-
-?>

@@ -3,25 +3,122 @@
 
 require_once('./database.php');
 
-class Product extends DatabaseObject
+class Product extends ProductBase
 {
-    protected static $table_name = "product";
-    protected static $db_fields = array(
-        'id', 'sku', 'name', 'price', 'type', 'size', 'height', 'width', 'length', 'weight'
-    );
+    private $height;
+    private $width;
+    private $length;
+    private $size;
+    private $weight;
 
-    public $id;
-    public $sku;
-    public $name;
-    public $price;
-    public $size;
-    public $type;
-    public $height;
-    public $width;
-    public $length;
-    public $weight;
-    private $temp_path;
+    public function __construct($height = 0, $width = 0, $length = 0, $size = 0, $weight = 0)
+    {
+        $this->height = $height;
+        $this->width = $width;
+        $this->length = $length;
+        $this->size = $size;
+        $this->weight = $weight;
+    }
 
+    public function getWeight()
+    {
+        return $this->weight;
+    }
+
+    public function setWeight($weight)
+    {
+        $this->weight = $weight;
+    }
+
+    public function getSize()
+    {
+        return $this->size;
+    }
+
+    public function setSize($size)
+    {
+        $this->size = $size;
+    }
+
+    public function getHeight()
+    {
+        return $this->height;
+    }
+
+    public function setHeight($height)
+    {
+        $this->height = $height;
+    }
+
+    public function getWidth()
+    {
+        return $this->width;
+    }
+
+    public function setWidth($width)
+    {
+        $this->width = $width;
+    }
+
+    public function getLength()
+    {
+        return $this->length;
+    }
+
+    public function setLength($length)
+    {
+        $this->length = $length;
+    }
+
+    public function getId()
+    {
+        return $this->id;
+    }
+
+    public function setId($id)
+    {
+        $this->id = $id;
+    }
+
+    public function getSku()
+    {
+        return $this->sku;
+    }
+
+    public function setSku($sku)
+    {
+        $this->sku = $sku;
+    }
+
+    public function getName()
+    {
+        return $this->name;
+    }
+
+    public function setName($name)
+    {
+        $this->name = $name;
+    }
+
+    public function getPrice()
+    {
+        return $this->price;
+    }
+
+    public function setPrice($price)
+    {
+        $this->price = $price;
+    }
+
+    public function getType()
+    {
+        return $this->type;
+    }
+
+    public function setType($type)
+    {
+        $this->type = $type;
+    }
 
     public static function count_all()
     {
@@ -33,64 +130,63 @@ class Product extends DatabaseObject
     }
 
 
-
     public function create()
     {
-
         global $database;
-
         $attributes = $this->sanitized_atributes();
         $sql = "INSERT INTO " . self::$table_name . " (";
         $sql .= "id, sku, name, price, type, size, height, width, length, weight";
         $sql .= ") values ('";
         $sql .= join("', '", array_values($attributes));
         $sql .= "')";
-        if ($database->query($sql)) {
-            $this->id = $database->insert_id();
-            return true;
-        } else {
-            return false;
-        }
+
+        $database->query($sql) ? $this->successfullyInserted($database) : $this . send_error();
     }
 
+    public function send_error()
+    {
+        echo 'there was an error';
+    }
 
-    public function save()
+    public function successfullyInserted($database)
+    {
+        $this->id = $database->insert_id();
+        return true;
+    }
+
+    public function delete()
     {
 
-        if (isset($this->id)) {
-            $this->update();
-        } else {
+        global $database;
 
-            if (!empty($this->errors)) {
-                return false;
-            }
-            if (strlen($this->caption) > 255) {
-                $this->errors[] = "The caption can only be less or equal to 255 ";
-                return false;
-            }
+        $sql = "DELETE FROM " . self::$table_name . " ";
+        $sql .= " WHERE ID = " . $database->escape_value($this->id);
+        $sql .= " LIMIT 1";
 
-            $target_path = SITE_ROOT . DB . 'public' . DB . $this->upload_dir . DB . $this->filename;
-            if (file_exists($target_path)) {
-                $this->errors[] = "The file {$this->filename} already exits";
-                return false;
-            }
-            if (move_uploaded_file(
-                $this->temp_path,
-                $target_path
-            )) {
-
-                if ($this->create()) {
-                    unset($this->temp_path);
-                    return true;
-                }
-            } else {
-                $this->errors[] = "The file upload failed,
-				possibily due to incorrect permissions on the 
-				upload folder.";
-                return false;
-            }
-        }
+        $database->query($sql);
+        return ($database->affected_rows() == 1) ? 'true' : 'false';
     }
+
+
+    public function update()
+    {
+
+        global $database;
+
+        $attributes = $this->sanitized_atributes();
+        $attribute_pairs = array();
+        foreach ($attributes as $key => $value) {
+            $attribute_pairs[] = "{$key}='{$value}'";
+        }
+
+        $sql = "UPDATE " . self::$table_name . " SET ";
+        $sql .= join(", ", $attribute_pairs);
+        $sql .= " WHERE id=" . $database->escape_value($this->id);
+        $database->query($sql);
+        return ($database->affected_rows() == 1) ? 'true' : 'false';
+    }
+
+
 
     private function has_attribute($attribute)
     {
@@ -126,65 +222,6 @@ class Product extends DatabaseObject
 
         return $clean_attributes;
     }
-    
-    public function delete()
-    {
-
-        global $database;
-
-        $sql = "DELETE FROM " . self::$table_name . " ";
-        $sql .= " WHERE ID = " . $database->escape_value($this->id);
-        $sql .= " LIMIT 1";
-
-        $database->query($sql);
-        return ($database->affected_rows() == 1) ? 'true' : 'false';
-    }
-
-
-    public function update()
-    {
-
-        global $database;
-
-        $attributes = $this->sanitized_atributes();
-        $attribute_pairs = array();
-        foreach ($attributes as $key => $value) {
-            $attribute_pairs[] = "{$key}='{$value}'";
-        }
-
-        $sql = "UPDATE " . self::$table_name . " SET ";
-        $sql .= join(", ", $attribute_pairs);
-        $sql .= " WHERE id=" . $database->escape_value($this->id);
-        // $sql .= "username ='".$database->escape_value($this->username)."',";
-        // $sql .= " password='".$database->escape_value($this->password)."',";
-        // $sql .= " first_name='".$database->escape_value($this->first_name)."',";
-        // $sql .= " last_name='".$database->escape_value($this->last_name)."'";
-
-        $database->query($sql);
-        return ($database->affected_rows() == 1) ? 'true' : 'false';
-    }
 }
 
 ?>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
